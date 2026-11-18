@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 REQUEST_COUNT = 10
 DEFAULT_TIMEOUT_SECONDS = 30
 CHUNK_SIZE_BYTES = 64 * 1024
+BYTES_PER_KB = 1_000
 BYTES_PER_MB = 1_000_000
 BITS_PER_BYTE = 8
 BITS_PER_MBIT = 1_000_000
@@ -59,6 +60,12 @@ def to_mb(n_bytes: float) -> float:
     return n_bytes / BYTES_PER_MB
 
 
+def format_size(n_bytes: int) -> str:
+    if n_bytes < BYTES_PER_MB:
+        return f"{n_bytes / BYTES_PER_KB:.1f} КБ"
+    return f"{to_mb(n_bytes):.2f} МБ"
+
+
 def to_mbit_per_s(n_bytes: float, seconds: float) -> float:
     # байты -> биты, затем в мегабиты (десятичные, 10^6)
     return n_bytes * BITS_PER_BYTE / seconds / BITS_PER_MBIT
@@ -68,7 +75,7 @@ def run(url: str, timeout: float, warmup: bool) -> None:
     print(f"URL: {url}")
     if warmup:
         size, code, reason, seconds = fetch_once(url, timeout)
-        print(f"прогрев: {code} {reason}, {to_mb(size):.2f} МБ, {seconds:.2f} с (не учитывается)")
+        print(f"прогрев: {code} {reason}, {format_size(size)}, {seconds:.2f} с (не учитывается)")
 
     sizes: list[int] = []
     durations: list[float] = []
@@ -76,7 +83,7 @@ def run(url: str, timeout: float, warmup: bool) -> None:
         size, code, reason, seconds = fetch_once(url, timeout)
         sizes.append(size)
         durations.append(seconds)
-        print(f"#{attempt:<2} {code} {reason}, {to_mb(size):.2f} МБ, {seconds:.2f} с")
+        print(f"#{attempt:<2} {code} {reason}, {format_size(size)}, {seconds:.2f} с")
 
     total_bytes = sum(sizes)
     total_seconds = sum(durations)
@@ -87,7 +94,7 @@ def run(url: str, timeout: float, warmup: bool) -> None:
     print()
     print(f"Запросов:                {len(durations)}")
     print(f"Среднее время запроса:   {avg_seconds:.3f} с")
-    print(f"Всего скачано:           {to_mb(total_bytes):.2f} МБ ({total_bytes} байт)")
+    print(f"Всего скачано:           {format_size(total_bytes)} ({total_bytes} байт)")
     print(f"Скорость скачивания:     {mbps:.2f} Мбит/с ({mb_per_s:.2f} МБ/с)")
 
 
